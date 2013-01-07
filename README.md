@@ -2,6 +2,8 @@
 
 Pop3 - is erlang library which provides work with pop3 protocol.
 
+[![Build Status](https://travis-ci.org/[0xAX]/[pop3].png)](https://travis-ci.org/[0xAX]/[pop3])
+
 ## Features
 
   * USER/PASS - authorization
