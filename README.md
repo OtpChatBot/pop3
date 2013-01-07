@@ -11,6 +11,7 @@ Pop3 - is erlang library which provides work with pop3 protocol.
   * RSET
   * NOOP
   * Retrive message with headers
+  * Ssl support
   * quit :)
 
 ## Using
@@ -49,7 +50,6 @@ pop3:quit(Data).
 
 ## TODO
 
-  * Add ssl support
   * Add APOP
   * ADD TOP
 

@@ -1,4 +1,4 @@
--module(pop3_client).
+-module(pop3_ssl_client).
 
 -behaviour(gen_server).
 
@@ -35,7 +35,6 @@ init([User, Password, Server, Port]) ->
                 password = Password, 
                 server = Server, 
                 port = Port}}.
-
 %% @doc Send `STAT` command
 %% @end
 handle_call(send_stat, _From, State) ->
@@ -47,9 +46,9 @@ handle_call(send_stat, _From, State) ->
 			{reply, error, State};
 		_ ->
 			% Send `STAT command`
-			gen_tcp:send(Sock, "STAT\r\n"),
+			ssl:send(Sock, "STAT\r\n"),
 			% Got server response
-			{ok, ServerResponse} = gen_tcp:recv(Sock, 0),
+			{ok, ServerResponse} = ssl:recv(Sock, 0),
 			% Match server response
 			case string:tokens(ServerResponse, " \r\n") of
 				["+OK", MessageCount, Size] ->
@@ -70,9 +69,9 @@ handle_call(get_list, _From, State) ->
 			{reply, error, State};
 		_ ->
 			% Send `LIST`
-			gen_tcp:send(Sock, "LIST\r\n"),
+			ssl:send(Sock, "LIST\r\n"),
 			% Got server response
-			{ok, ServerResponse} = gen_tcp:recv(Sock, 0),
+			{ok, ServerResponse} = ssl:recv(Sock, 0),
 			% Match server response
 			case string:tokens(ServerResponse, " \r\n") of
 				["+OK", MessageCount, _, [_Bracket | Octets] | _] ->
@@ -95,9 +94,9 @@ handle_call({get_list, MessageId}, _From, State) ->
 			{reply, error, State};
 		_ ->
 			% Send `LIST`
-			gen_tcp:send(Sock, "LIST " ++ integer_to_list(MessageId) ++ "\r\n"),
+			ssl:send(Sock, "LIST " ++ integer_to_list(MessageId) ++ "\r\n"),
 			% Got server response
-			{ok, ServerResponse} = gen_tcp:recv(Sock, 0),
+			{ok, ServerResponse} = gen_tcp:ssl(Sock, 0),
 			% Match server response
 			case string:tokens(ServerResponse, " \r\n") of
 				["+OK", MessageId, Octets] ->
@@ -143,7 +142,7 @@ handle_cast({delete, MessageId}, State) ->
 			{noreply, State};
 		_ ->
 			% Send `DELE`
-			gen_tcp:send(Sock, "DELE " ++ integer_to_list(MessageId) ++ "\r\n"),
+			ssl:send(Sock, "DELE " ++ integer_to_list(MessageId) ++ "\r\n"),
 			% return
 			{noreply, State#state{socket = Sock}}
 	end;
@@ -159,7 +158,7 @@ handle_cast(rset, State) ->
 			{noreply, State};
 		_ ->
 			% send `RSET`
-			gen_tcp:send(Sock, "RSET\r\n"),
+			ssl:send(Sock, "RSET\r\n"),
 			% return
 			{noreply, State#state{socket = Sock}}
 	end;
@@ -175,7 +174,7 @@ handle_cast(noop, State) ->
 			{noreply, State};
 		_ ->
 			% send `NOOP`
-			gen_tcp:send(Sock, "NOOP\r\n"),
+			ssl:send(Sock, "NOOP\r\n"),
 			% return
 			{noreply, State#state{socket = Sock}}
 	end;
@@ -185,7 +184,7 @@ handle_cast(noop, State) ->
 handle_cast(quit, State) ->
 	Socket = get_socket(State),
 	% Send `QUIT\r\n`
-	gen_tcp:send(Socket, "QUIT\r\n"),
+	ssl:send(Socket, "QUIT\r\n"),
 	% stop process
 	{stop, normal, State};
 
@@ -200,7 +199,8 @@ terminate(_Reason, _State) ->
  
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
- 
+
+
 %% Internal functions
 
 %% @doc Connect to pop3 server and simple USER/PASS authorization
@@ -209,26 +209,26 @@ code_change(_OldVsn, State, _Extra) ->
            -> error | {success, Socket :: term()}.
 auth(User, Pass, Server, Port) ->
 	% Connect to pop3 server
-	case gen_tcp:connect(Server, Port, [{active, false}, {packet, 0}]) of
+	case ssl:connect(Server, Port, [{active, false}, {packet, 0}]) of
 		{ok, Socket} ->
-			% check sucessful handshake
-			{ok, Packet} = gen_tcp:recv(Socket, 0),
+		    % check sucessful handshake
+			{ok, Packet} = ssl:recv(Socket, 0),
 			% Parse pop3 server answer
-			case Packet of
-				"+OK\r\n" ->
-					% try to send USER info
-					gen_tcp:send(Socket, "USER " ++ User ++ "\r\n"),
+			case lists:nth(1, string:tokens(Packet, " \r\n")) of
+				"+OK" ->
+				    % try to send USER info
+					ssl:send(Socket, "USER " ++ User ++ "\r\n"),
 					% got answer
-					{ok, Answer} = gen_tcp:recv(Socket, 0),
+					{ok, Answer} = ssl:recv(Socket, 0),
 					% Check answer
-					case Answer of
-						"+OK\r\n" ->
+					case lists:nth(1, string:tokens(Answer, " \r\n")) of
+						"+OK" ->
 							% Send password
-							gen_tcp:send(Socket, "PASS " ++ Pass ++ "\r\n"),
+							ssl:send(Socket, "PASS " ++ Pass ++ "\r\n"),
 							% Get answer
-							{ok, CheckAuth} = gen_tcp:recv(Socket, 0),
-							case string:tokens(CheckAuth, " ") of
-								["+OK" | _] ->
+							{ok, CheckAuth} = ssl:recv(Socket, 0),
+							case lists:nth(1, string:tokens(CheckAuth, " ")) of
+								"+OK" ->
 									{success, Socket};
 								_ ->
 									error

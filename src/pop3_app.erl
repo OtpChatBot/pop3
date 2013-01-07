@@ -10,6 +10,9 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
+    ok = application:start(crypto),
+    ok = application:start(public_key),
+    ok = application:start(ssl),
 	% start main supervisor
     pop3_sup:start_link().
 

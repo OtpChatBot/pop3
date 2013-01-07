@@ -5,8 +5,7 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib,
-                  ssl
+                  stdlib
                  ]},
   {mod, { pop3_app, []}},
   {env, []}

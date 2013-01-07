@@ -20,20 +20,38 @@ start_link() ->
 -spec start_pop3_client(User :: string(), Password :: string(), Server :: string(), Port :: integer()) -> {ok, Pid :: pid()} | {error, Reason :: term()}.
 start_pop3_client(User, Password, Server, Port) ->
     Id = list_to_atom(User ++ "@" ++ Password),
-    % pop3 client spec
-    ChildSpec = {Id, 
-   					{pop3_client, start_link, [Id, User, Password, Server, Port]},
-    	 			 temporary, 2000, worker, []
-    			},
-    % Check pop3 client
-    case whereis(Id) of
-    	undefined ->
-    		% run new pop3 client
-    		supervisor:start_child(?MODULE, ChildSpec);
-    	% Pid alread exist and maybe connected
-        Pid ->
-            % return pid
-    		{ok, Pid}
+    case Port of
+        110 ->
+            % pop3 client spec
+            ChildSpec = {Id, 
+   			      		  {pop3_client, start_link, [Id, User, Password, Server, Port]},
+    	 		    	   temporary, 2000, worker, []
+    			         },
+            % Check pop3 client
+            case whereis(Id) of
+    	       undefined ->
+    		      % run new pop3 client
+    		      supervisor:start_child(?MODULE, ChildSpec);
+    	          % Pid alread exist and maybe connected
+                Pid ->
+                    % return pid
+    		      {ok, Pid}
+            end;
+        _ ->
+            ChildSpec = {Id, 
+                        {pop3_ssl_client, start_link, [Id, User, Password, Server, Port]},
+                         temporary, 2000, worker, []
+                        },
+            % Check pop3 client
+            case whereis(Id) of
+               undefined ->
+                  % run new pop3 client
+                  supervisor:start_child(?MODULE, ChildSpec);
+                  % Pid alread exist and maybe connected
+                Pid ->
+                    % return pid
+                  {ok, Pid}
+            end
     end.
 
 %% ===================================================================
