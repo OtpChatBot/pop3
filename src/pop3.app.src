@@ -1,0 +1,13 @@
+{application, pop3,
+ [
+  {description, "Lightweight pop3 library for erlang application."},
+  {vsn, "0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  ssl
+                 ]},
+  {mod, { pop3_app, []}},
+  {env, []}
+ ]}.
